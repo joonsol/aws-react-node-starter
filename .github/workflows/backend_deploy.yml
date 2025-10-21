@@ -53,8 +53,8 @@ jobs:
               cd backend
               npm install --omit=dev --no-fund --no-audit
               if pm2 describe starter-backend > /dev/null; then
-                pm2 reload ecosystem.config.js
+                pm2 reload ecosystem.config.cjs
               else
-                pm2 start ecosystem.config.js
+                pm2 start ecosystem.config.cjs
               fi
               pm2 save
