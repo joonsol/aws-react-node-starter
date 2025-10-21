@@ -10,7 +10,10 @@ app.use(morgan("dev"));
 app.use(express.json());
 
 // 로컬 테스트 CORS (리버스프록시 쓰면 제거 가능)
-app.use(cors({ origin: ["http://localhost:5173"], credentials: true }));
+app.use(cors({ 
+  origin: ["http://localhost:5173"], 
+  credentials: true
+ }));
 
 app.get("/api/health", (req, res) => {
   res.json({ ok: true, time: new Date().toISOString() });
