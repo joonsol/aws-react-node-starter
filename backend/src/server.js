@@ -28,3 +28,8 @@ app.post("/api/posts", (req, res) => {
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`API on :${PORT}`));
+
+
+app.get("/", (req, res) => {
+  res.send("✅ Backend server is running on port 3001");
+});
