@@ -42,20 +42,19 @@ jobs:
       - name: Deploy on EC2 (untar, install, pm2 reload)
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            set -e
-            cd ${{ secrets.EC2_DEPLOY_DIR }}
-            tar -xzf backend.tar.gz
-            rm -f backend.tar.gz
-            cd backend
-            npm ci --omit=dev
-            # PM2 앱 시작/갱신 (파일명 .js 에 맞춤)
-            if pm2 describe starter-backend > /dev/null; then
-              pm2 reload ecosystem.config.js
-            else
-              pm2 start ecosystem.config.js
-            fi
-            pm2 save
+            host: ${{ secrets.EC2_HOST }}
+            username: ${{ secrets.EC2_USER }}
+            key: ${{ secrets.EC2_SSH_KEY }}
+            script: |
+              set -e
+              cd ${{ secrets.EC2_DEPLOY_DIR }}
+              tar -xzf backend.tar.gz
+              rm -f backend.tar.gz
+              cd backend
+              npm install --omit=dev --no-fund --no-audit
+              if pm2 describe starter-backend > /dev/null; then
+                pm2 reload ecosystem.config.js
+              else
+                pm2 start ecosystem.config.js
+              fi
+              pm2 save
