@@ -15,22 +15,30 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # backend 디렉터리만 아티팩트로 업로드 (node_modules 제외)
       - name: Archive backend
         run: |
           tar --exclude='./backend/node_modules' -czf backend.tar.gz backend
 
-      # 서버로 전송
+      # (선택) 원격 폴더 보장: 먼저 폴더 만들어 두고 권한 맞추기
+      - name: Ensure deploy dir exists
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            mkdir -p ${{ secrets.EC2_DEPLOY_DIR }}
+            sudo chown -R ${{ secrets.EC2_USER }}:${{ secrets.EC2_USER }} ${{ secrets.EC2_DEPLOY_DIR }}
+
       - name: Upload to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}     # 개인키(PEM) 내용을 Secret에 그대로 저장
+          key: ${{ secrets.EC2_SSH_KEY }}
           source: "backend.tar.gz"
-          target: ${{ secrets.EC2_DEPLOY_DIR }}   # 예: /var/www/aws-react-node-starter/
+          target: ${{ secrets.EC2_DEPLOY_DIR }}
 
-      # 서버에서 배포: 풀기 → 의존성 설치 → PM2 reload
       - name: Deploy on EC2 (untar, install, pm2 reload)
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -43,12 +51,11 @@ jobs:
             tar -xzf backend.tar.gz
             rm -f backend.tar.gz
             cd backend
-            # 프로덕션 의존성 설치
             npm ci --omit=dev
-            # PM2 앱 시작/갱신 (ecosystem.config.cjs 사용)
+            # PM2 앱 시작/갱신 (파일명 .js 에 맞춤)
             if pm2 describe starter-backend > /dev/null; then
-              pm2 reload ecosystem.config.cjs
+              pm2 reload ecosystem.config.js
             else
-              pm2 start ecosystem.config.cjs
+              pm2 start ecosystem.config.js
             fi
             pm2 save
