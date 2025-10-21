@@ -22,6 +22,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Install deps
         run: npm ci
@@ -29,6 +31,7 @@ jobs:
       - name: Build
         run: npm run build
 
+      # AWS 자격 증명 주입
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -36,28 +39,34 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region:            ${{ secrets.AWS_REGION }}
 
-      - name: Install AWS CLI (ensure)
+      # AWS CLI v2 (apt 말고 공식 번들) 설치
+      - name: Install AWS CLI v2
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y awscli
+          sudo apt-get install -y unzip
+          curl -sSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o awscliv2.zip
+          unzip -q awscliv2.zip
+          sudo ./aws/install --update
+          aws --version
 
-      # 1) 해시 자산들: 긴 캐시
-      - name: Sync assets with long cache
+      # 1) 해시 자산(JS/CSS/이미지 등) - 긴 캐시
+      - name: Sync hashed assets with long cache
         run: |
           aws s3 sync ./dist s3://${{ secrets.S3_BUCKET }} \
             --delete \
             --exclude "index.html" \
             --cache-control "public,max-age=31536000,immutable"
 
-      # 2) index.html: no-cache
-      - name: Upload index.html (no-cache)
+      # 2) index.html - no-cache (항상 최신)
+      - name: Upload index.html with no-cache
         run: |
           aws s3 cp ./dist/index.html s3://${{ secrets.S3_BUCKET }}/index.html \
             --cache-control "no-cache, no-store, must-revalidate" \
             --content-type "text/html"
 
-      - name: Invalidate CloudFront (/index.html)
+      # 3) CloudFront 무효화 (index.html만)
+      - name: Invalidate CloudFront (index.html)
         run: |
           aws cloudfront create-invalidation \
-            --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
+            --distribution-id "${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}" \
             --paths "/index.html"
