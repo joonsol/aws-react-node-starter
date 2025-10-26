@@ -32,13 +32,9 @@ jobs:
       - name: Inject Vite env
         run: |
           pwd && ls -la
-          cat > .env.production <<EOF
-          VITE_API_URL=${{ secrets.API_URL }}
-          NODE_ENV=production
-          EOF
+          printf "VITE_API_URL=%s\nNODE_ENV=production\n" "${{ secrets.API_URL }}" > .env.production
           echo "---- .env.production ----"
           cat .env.production
-
 
       - name: Build
         run: npm run build
@@ -85,7 +81,7 @@ jobs:
             --cache-control "no-cache, no-store, must-revalidate" \
             --content-type "text/html"
 
-      # 3️⃣ CloudFront 무효화 (처음엔 전체, 이후엔 index.html 만 사용해도 됨)
+      # 3️⃣ CloudFront 무효화 (처음엔 전체, 이후엔 index.html만 사용해도 됨)
       - name: Invalidate CloudFront (all once)
         run: |
           aws cloudfront create-invalidation \
