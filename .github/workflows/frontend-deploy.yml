@@ -28,6 +28,12 @@ jobs:
       - name: Install deps
         run: npm ci
 
+      # ✅ .env.production에 VITE_API_URL 주입 (빌드 전에!)
+      - name: Inject Vite env
+        run: |
+          echo "VITE_API_URL=${{ secrets.API_URL }}" > .env.production
+          echo "NODE_ENV=production" >> .env.production
+
       - name: Build
         run: npm run build
 
@@ -39,7 +45,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region:            ${{ secrets.AWS_REGION }}
 
-      # ✅ AWS CLI v2 공식 번들 설치 (apt install 제거)
+      # ✅ AWS CLI v2 설치
       - name: Install AWS CLI v2
         run: |
           sudo apt-get update -y
@@ -49,7 +55,7 @@ jobs:
           sudo ./aws/install --update
           aws --version
 
-      # 1️⃣ 해시된 자산(JS/CSS 등): 캐시 길게
+      # 1️⃣ 해시 자산: 장기 캐시
       - name: Sync hashed assets with long cache
         run: |
           aws s3 sync ./dist s3://${{ secrets.S3_BUCKET }} \
@@ -57,14 +63,14 @@ jobs:
             --exclude "index.html" \
             --cache-control "public,max-age=31536000,immutable"
 
-      # 2️⃣ index.html: 캐시 없음 (항상 최신)
+      # 2️⃣ index.html: no-cache
       - name: Upload index.html with no-cache
         run: |
           aws s3 cp ./dist/index.html s3://${{ secrets.S3_BUCKET }}/index.html \
             --cache-control "no-cache, no-store, must-revalidate" \
             --content-type "text/html"
 
-      # 3️⃣ CloudFront 캐시 무효화
+      # 3️⃣ CloudFront 무효화 (index.html만)
       - name: Invalidate CloudFront (index.html)
         run: |
           aws cloudfront create-invalidation \
