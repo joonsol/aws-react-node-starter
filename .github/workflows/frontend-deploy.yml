@@ -31,8 +31,10 @@ jobs:
       # ✅ 1) Vite 환경변수 주입 (빌드 전에!)
       - name: Inject Vite env
         run: |
-          echo "VITE_API_URL=${{ secrets.API_URL }}" > frontend/.env.production
-          echo "NODE_ENV=production" >> frontend/.env.production
+          pwd && ls -la
+          printf "VITE_API_URL=%s\nNODE_ENV=production\n" "${{ secrets.API_URL }}" > .env.production
+          echo "---- .env.production ----"
+          cat .env.production
 
       - name: Build
         run: npm run build
